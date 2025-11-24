@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base Colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- TaskFlow App Colors -->
+    <color name="primary_green">#006650</color>
+    <color name="primary_dark">#004D3D</color>
+    <color name="accent_teal">#03DAC5</color>
+
+    <!-- Priority Colors -->
+    <color name="priority_high">#FF6B6B</color>
+    <color name="priority_medium">#FFA500</color>
+    <color name="priority_low">#4CAF50</color>
+
+    <!-- UI Colors -->
+    <color name="background_gray">#F5F5F5</color>
+    <color name="text_gray">#666666</color>
+    <color name="text_light_gray">#CCCCCC</color>
+
+    <!-- Material Design 3 Colors (YANG KURANG INI) -->
+    <color name="md_theme_primary">#006650</color>
+    <color name="md_theme_onPrimary">#FFFFFF</color>
+    <color name="md_theme_primaryContainer">#80CBC4</color>
+    <color name="md_theme_onPrimaryContainer">#002114</color>
+    <color name="md_theme_secondary">#8F98FF</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_secondaryContainer">#E0E0FF</color>
+    <color name="md_theme_onSecondaryContainer">#1A1A4A</color>
+    <color name="md_theme_tertiary">#FFC548</color>
+    <color name="md_theme_onTertiary">#000000</color>
+    <color name="md_theme_error">#BA1A1A</color>
+    <color name="md_theme_onError">#FFFFFF</color>
+    <color name="md_theme_background">#FBFDF9</color>
+    <color name="md_theme_onBackground">#191C1A</color>
+    <color name="md_theme_surface">#FBFDF9</color>
+    <color name="md_theme_onSurface">#191C1A</color>
+</resources>

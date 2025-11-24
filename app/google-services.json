@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "560957061422",
+    "firebase_url": "https://taskflow-ffe80-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "taskflow-ffe80",
+    "storage_bucket": "taskflow-ffe80.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:560957061422:android:2900a7847e4c3c042c22bf",
+        "android_client_info": {
+          "package_name": "com.taskflow.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmoG4GaDPejHyECRdESh_RdHfJvrg4CZU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
