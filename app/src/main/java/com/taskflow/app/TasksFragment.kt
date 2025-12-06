@@ -40,9 +40,8 @@ class TasksFragment : Fragment() {
         // Setup RecyclerView
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_tasks)
 
-        // ✅ INITIALIZE ADAPTER dengan constructor yang benar
+        // ✅ INITIALIZE ADAPTER - Constructor baru tanpa tasks parameter
         taskAdapter = TaskAdapter(
-            tasks = emptyList(),
             onTaskClick = { task ->
                 // Navigate to detail or edit
                 val intent = Intent(requireContext(), AddTaskActivity::class.java)
@@ -83,7 +82,7 @@ class TasksFragment : Fragment() {
     private fun loadTasks() {
         viewLifecycleOwner.lifecycleScope.launch {
             repository.allTasks.collect { tasks ->
-                // ✅ GUNAKAN updateTasks() bukan submitList()
+                // ✅ updateTasks() sekarang menggunakan DiffUtil (lebih efisien!)
                 taskAdapter.updateTasks(tasks)
 
                 // Update sync status
