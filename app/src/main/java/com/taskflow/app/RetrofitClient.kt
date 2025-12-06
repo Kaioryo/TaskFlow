@@ -26,29 +26,23 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // ✅ CACHE INTERCEPTOR - Hanya cache saat offline
+    // Cache interceptor for offline support
     private val cacheInterceptor = Interceptor { chain ->
         var request = chain.request()
 
         if (!NetworkHelper(context).isNetworkAvailable()) {
-            // ✅ OFFLINE: Gunakan cache
+            // Offline: use cache
             val cacheControl = CacheControl.Builder()
                 .maxStale(7, TimeUnit.DAYS)
-                .onlyIfCached()
                 .build()
 
             request = request.newBuilder()
                 .cacheControl(cacheControl)
                 .build()
         } else {
-            // ✅ ONLINE: NO CACHE - Force network
-            val cacheControl = CacheControl.Builder()
-                .noCache()
-                .noStore() // ✅ Jangan simpan ke cache
-                .build()
-
+            // Online: force network
             request = request.newBuilder()
-                .cacheControl(cacheControl)
+                .cacheControl(CacheControl.FORCE_NETWORK)
                 .build()
         }
 
@@ -63,7 +57,7 @@ object RetrofitClient {
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .cache(cache)
-            .addInterceptor(cacheInterceptor) // ✅ HANYA 1 interceptor
+            .addInterceptor(cacheInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)

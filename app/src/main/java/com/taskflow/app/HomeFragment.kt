@@ -2,13 +2,13 @@ package com.taskflow.app
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
@@ -24,6 +24,9 @@ class HomeFragment : Fragment() {
     private lateinit var repository: TaskRepository
     private lateinit var networkHelper: NetworkHelper
 
+    // ✅ Track if this is first load
+    private var isFirstLoad = true
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -35,129 +38,139 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        Log.d("HomeFragment", "✅ onViewCreated started")
-
-        // Initialize network helper
         networkHelper = NetworkHelper(requireContext())
 
-        // Initialize views
         tvQuote = view.findViewById(R.id.tv_quote)
         tvQuoteAuthor = view.findViewById(R.id.tv_quote_author)
         tvScheduleTitle = view.findViewById(R.id.tv_schedule_title)
         tvScheduleDesc = view.findViewById(R.id.tv_schedule_desc)
         tvScheduleLocation = view.findViewById(R.id.tv_schedule_location)
 
-        Log.d("HomeFragment", "✅ All views initialized")
-
-        // Initialize database
         val database = AppDatabase.getDatabase(requireContext())
         repository = TaskRepository(database.taskDao())
 
-        Log.d("HomeFragment", "✅ Database initialized")
-
-        // Set username
         try {
             val tvUsername = view.findViewById<TextView>(R.id.tv_user_name)
             val sharedPref = requireContext().getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE)
             val username = sharedPref.getString("username", "User")
             tvUsername.text = username
-            Log.d("HomeFragment", "✅ Username set: $username")
         } catch (e: Exception) {
-            Log.e("HomeFragment", "❌ tv_user_name not found: ${e.message}")
+            // Ignore
         }
 
-        // Fetch quote
-        fetchMotivationalQuote()
+        // ✅ Show loading immediately
+        showLoadingState()
 
-        // Load schedule from database
+        // ✅ DON'T fetch here - let onResume handle it
         loadScheduleFromDatabase()
     }
 
-    private fun fetchMotivationalQuote() {
-        if (networkHelper.isNetworkAvailable()) {
-            tvQuote.text = "Loading fresh quote..."
-        } else {
-            tvQuote.text = "Loading from cache..."
+    private fun fetchQuote() {
+        // Prevent multiple simultaneous requests
+        if (QuoteManager.isRequestInProgress()) {
+            return
         }
-        tvQuoteAuthor.text = ""
+
+        // Check if we should fetch from API or use cache
+        if (!networkHelper.isNetworkAvailable() || !QuoteManager.canMakeAPICall()) {
+            showCachedQuote()
+            return
+        }
+
+        // Show loading state
+        showLoadingState()
+
+        // Fetch fresh quote from API
+        QuoteManager.markAPICallStarted()
 
         RetrofitClient.quoteApiService.getRandomQuote().enqueue(object : Callback<List<QuoteResponse>> {
-            override fun onResponse(
-                call: Call<List<QuoteResponse>>,
-                response: Response<List<QuoteResponse>>
-            ) {
-                if (response.isSuccessful && response.body() != null && response.body()!!.isNotEmpty()) {
+            override fun onResponse(call: Call<List<QuoteResponse>>, response: Response<List<QuoteResponse>>) {
+                QuoteManager.markAPICallFinished()
+
+                if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
                     val quote = response.body()!![0]
-                    tvQuote.text = "\"${quote.quote}\""
 
-                    // ✅ Hanya show 💾 jika benar-benar offline
-                    val cacheInfo = if (!networkHelper.isNetworkAvailable()) {
-                        " 💾" // Offline mode
-                    } else {
-                        "" // Online - fresh quote
-                    }
+                    QuoteManager.addQuote(quote)
+                    QuoteManager.incrementAPICount()
 
-                    tvQuoteAuthor.text = "- ${quote.author}$cacheInfo"
-
-                    val source = if (cacheInfo.isNotEmpty()) "from cache (offline)" else "fresh from network"
-                    Log.d("HomeFragment", "✅ Quote loaded $source: ${quote.quote}")
+                    displayQuote(quote)
                 } else {
-                    showFallbackQuote()
+                    showCachedQuote()
                 }
             }
 
             override fun onFailure(call: Call<List<QuoteResponse>>, t: Throwable) {
-                showFallbackQuote()
-                Log.e("HomeFragment", "❌ Quote API failed: ${t.message}")
+                QuoteManager.markAPICallFinished()
+                showCachedQuote()
             }
         })
     }
 
-    private fun showFallbackQuote() {
-        tvQuote.text = "\"The only way to do great work is to love what you do.\""
-        tvQuoteAuthor.text = "- Steve Jobs 📴"
+    private fun showLoadingState() {
+        tvQuote.text = "Loading inspiring quote..."
+        tvQuoteAuthor.text = ""
     }
 
+    private fun showCachedQuote() {
+        val quote = QuoteManager.getNextCachedQuote()
+
+        if (quote == null) {
+            val defaultQuote = QuoteResponse(
+                quote = "The only way to do great work is to love what you do.",
+                author = "Steve Jobs"
+            )
+            displayQuote(defaultQuote)
+        } else {
+            displayQuote(quote)
+        }
+    }
+
+    private fun displayQuote(quote: QuoteResponse) {
+        tvQuote.text = "\"${quote.quote}\""
+        tvQuoteAuthor.text = "- ${quote.author}"
+    }
 
     private fun loadScheduleFromDatabase() {
-        Log.d("HomeFragment", "📊 Loading schedule from database...")
-
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 repository.incompleteTasks.collect { tasks ->
-                    Log.d("HomeFragment", "📊 Tasks received: ${tasks.size} items")
-
                     if (tasks.isNotEmpty()) {
-                        // Get first task (most urgent)
                         val nextTask = tasks.first()
-
-                        Log.d("HomeFragment", "📌 Next task: ${nextTask.title}")
-
-                        // Update UI dengan data dari database
                         tvScheduleTitle.text = nextTask.title
                         tvScheduleDesc.text = nextTask.description
                         tvScheduleLocation.text = "${nextTask.location} | ${nextTask.dueTime}"
-
-                        Log.d("HomeFragment", "✅ Schedule updated successfully!")
-
                     } else {
-                        Log.d("HomeFragment", "⚠️ No tasks found")
-
-                        // Set default text if no tasks
                         tvScheduleTitle.text = "No upcoming tasks"
                         tvScheduleDesc.text = "Add a task to see it here"
                         tvScheduleLocation.text = "---"
                     }
                 }
             } catch (e: Exception) {
-                Log.e("HomeFragment", "❌ Error loading schedule: ${e.message}", e)
+                // Ignore
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d("HomeFragment", "🔄 onResume - reloading schedule")
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // ✅ Only show loading if we're going to fetch new quote
+            if (!isFirstLoad && QuoteManager.canMakeAPICall() && networkHelper.isNetworkAvailable()) {
+                showLoadingState()
+            }
+
+            // Small delay for smooth transition
+            if (isFirstLoad) {
+                delay(500) // Longer delay on first load
+                isFirstLoad = false
+            } else {
+                delay(300) // Shorter delay on refresh
+            }
+
+            fetchQuote()
+        }
+
         loadScheduleFromDatabase()
     }
 }
