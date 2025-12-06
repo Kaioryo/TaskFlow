@@ -22,6 +22,7 @@ class HomeFragment : Fragment() {
     private lateinit var tvScheduleDesc: TextView
     private lateinit var tvScheduleLocation: TextView
     private lateinit var repository: TaskRepository
+    private lateinit var networkHelper: NetworkHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,6 +36,9 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         Log.d("HomeFragment", "✅ onViewCreated started")
+
+        // Initialize network helper
+        networkHelper = NetworkHelper(requireContext())
 
         // Initialize views
         tvQuote = view.findViewById(R.id.tv_quote)
@@ -70,7 +74,11 @@ class HomeFragment : Fragment() {
     }
 
     private fun fetchMotivationalQuote() {
-        tvQuote.text = "Loading quote..."
+        if (networkHelper.isNetworkAvailable()) {
+            tvQuote.text = "Loading fresh quote..."
+        } else {
+            tvQuote.text = "Loading from cache..."
+        }
         tvQuoteAuthor.text = ""
 
         RetrofitClient.quoteApiService.getRandomQuote().enqueue(object : Callback<List<QuoteResponse>> {
@@ -81,8 +89,18 @@ class HomeFragment : Fragment() {
                 if (response.isSuccessful && response.body() != null && response.body()!!.isNotEmpty()) {
                     val quote = response.body()!![0]
                     tvQuote.text = "\"${quote.quote}\""
-                    tvQuoteAuthor.text = "- ${quote.author}"
-                    Log.d("HomeFragment", "✅ Quote loaded: ${quote.quote}")
+
+                    // ✅ Hanya show 💾 jika benar-benar offline
+                    val cacheInfo = if (!networkHelper.isNetworkAvailable()) {
+                        " 💾" // Offline mode
+                    } else {
+                        "" // Online - fresh quote
+                    }
+
+                    tvQuoteAuthor.text = "- ${quote.author}$cacheInfo"
+
+                    val source = if (cacheInfo.isNotEmpty()) "from cache (offline)" else "fresh from network"
+                    Log.d("HomeFragment", "✅ Quote loaded $source: ${quote.quote}")
                 } else {
                     showFallbackQuote()
                 }
@@ -97,8 +115,9 @@ class HomeFragment : Fragment() {
 
     private fun showFallbackQuote() {
         tvQuote.text = "\"The only way to do great work is to love what you do.\""
-        tvQuoteAuthor.text = "- Steve Jobs"
+        tvQuoteAuthor.text = "- Steve Jobs 📴"
     }
+
 
     private fun loadScheduleFromDatabase() {
         Log.d("HomeFragment", "📊 Loading schedule from database...")

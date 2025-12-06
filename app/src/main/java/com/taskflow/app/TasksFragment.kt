@@ -13,7 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TasksFragment : Fragment() {
 
@@ -40,10 +42,9 @@ class TasksFragment : Fragment() {
         // Setup RecyclerView
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_tasks)
 
-        // ✅ INITIALIZE ADAPTER - Constructor baru tanpa tasks parameter
+        // ✅ INITIALIZE ADAPTER
         taskAdapter = TaskAdapter(
             onTaskClick = { task ->
-                // Navigate to detail or edit
                 val intent = Intent(requireContext(), AddTaskActivity::class.java)
                 intent.putExtra("EDIT_TASK_ID", task.id)
                 startActivity(intent)
@@ -59,7 +60,7 @@ class TasksFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = taskAdapter
 
-        // ✅ LOADING VIEWS (optional - jika ada di layout)
+        // ✅ LOADING VIEWS
         progressBar = view.findViewById(R.id.progressBar)
         tvSyncStatus = view.findViewById(R.id.tv_sync_status)
 
@@ -68,7 +69,7 @@ class TasksFragment : Fragment() {
             startActivity(Intent(requireContext(), AddTaskActivity::class.java))
         }
 
-        // ✅ SYNC BUTTON (optional - jika ada di layout)
+        // ✅ SYNC BUTTON
         view.findViewById<View>(R.id.btn_sync)?.setOnClickListener {
             syncTasksFromCloud()
         }
@@ -82,20 +83,19 @@ class TasksFragment : Fragment() {
     private fun loadTasks() {
         viewLifecycleOwner.lifecycleScope.launch {
             repository.allTasks.collect { tasks ->
-                // ✅ updateTasks() sekarang menggunakan DiffUtil (lebih efisien!)
                 taskAdapter.updateTasks(tasks)
 
                 // Update sync status
                 if (networkHelper.isNetworkAvailable()) {
-                    tvSyncStatus?.text = "✅ Synced"
+                    tvSyncStatus?.text = "✅ Synced (${tasks.size} tasks)"
                 } else {
-                    tvSyncStatus?.text = "📱 Offline"
+                    tvSyncStatus?.text = "📱 Offline (${tasks.size} tasks)"
                 }
             }
         }
     }
 
-    // ✅ SYNC FROM CLOUD
+    // ✅ SYNC FROM CLOUD (FIXED)
     private fun syncTasksFromCloud() {
         if (!networkHelper.isNetworkAvailable()) {
             Toast.makeText(requireContext(), "❌ No internet connection", Toast.LENGTH_SHORT).show()
@@ -107,29 +107,48 @@ class TasksFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val cloudTasks = FirebaseManager.getTasksFromCloud()
+                withContext(Dispatchers.IO) {
+                    val cloudTasks = FirebaseManager.getTasksFromCloud()
 
-                // Merge with local tasks
-                for (task in cloudTasks) {
-                    repository.insertTask(task)
+                    if (cloudTasks.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                requireContext(),
+                                "⚠️ No tasks found in cloud",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        return@withContext
+                    }
+
+                    // ✅ INSERT SEMUA TASKS KE LOCAL DATABASE
+                    for (task in cloudTasks) {
+                        repository.insertTask(task)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "✅ Synced ${cloudTasks.size} tasks from cloud",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        tvSyncStatus?.text = "✅ Synced (${cloudTasks.size} tasks)"
+                    }
                 }
-
-                Toast.makeText(
-                    requireContext(),
-                    "✅ Synced ${cloudTasks.size} tasks from cloud",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                tvSyncStatus?.text = "✅ Synced"
             } catch (e: Exception) {
-                Toast.makeText(
-                    requireContext(),
-                    "❌ Sync failed: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-                tvSyncStatus?.text = "❌ Sync failed"
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        "❌ Sync failed: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    tvSyncStatus?.text = "❌ Sync failed"
+                }
             } finally {
-                progressBar?.visibility = View.GONE
+                withContext(Dispatchers.Main) {
+                    progressBar?.visibility = View.GONE
+                }
             }
         }
     }
