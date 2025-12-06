@@ -127,36 +127,32 @@
             android:textSize="16sp" />
     </LinearLayout>
 
-    <!-- Sync Status Bar -->
+    <!-- ✅ Sync Status Bar (NO BUTTON - Auto sync only) -->
     <LinearLayout
+        android:id="@+id/layout_sync_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp"
+        android:padding="12dp"
         android:gravity="center_vertical"
-        android:background="@color/colorPrimaryLight">
+        android:background="#E8F5E9"
+        app:layout_constraintTop_toBottomOf="@id/layout_tabs"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
             android:id="@+id/tv_sync_status"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="✅ Synced"
+            android:text="✅ Auto sync active"
             android:textSize="14sp"
-            android:textColor="@color/colorTextSecondary" />
-
-        <Button
-            android:id="@+id/btn_sync"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔄 Sync"
-            android:textSize="12sp"
-            style="?attr/materialButtonOutlinedStyle" />
+            android:textColor="#2E7D32" />
 
         <ProgressBar
             android:id="@+id/progressBar"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_marginStart="8dp"
             android:visibility="gone" />
     </LinearLayout>
@@ -166,25 +162,25 @@
         android:id="@+id/rv_tasks"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:clipToPadding="false"
         android:paddingBottom="80dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_tabs" />
+        app:layout_constraintTop_toBottomOf="@id/layout_sync_status" />
 
     <!-- Floating Action Button untuk Add Task -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add_task"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="80dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="#006650"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:tint="@color/white" />
+    android:id="@+id/fab_add_task"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="16dp"
+    android:layout_marginBottom="80dp"
+    android:src="@android:drawable/ic_input_add"
+    app:backgroundTint="#006650"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:tint="@color/white" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

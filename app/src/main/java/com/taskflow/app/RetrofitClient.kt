@@ -26,24 +26,25 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // ✅ OFFLINE ONLY CACHE - Hanya gunakan cache saat offline
-    private val offlineCacheInterceptor = Interceptor { chain ->
+    // ✅ CACHE INTERCEPTOR - Hanya cache saat offline
+    private val cacheInterceptor = Interceptor { chain ->
         var request = chain.request()
 
         if (!NetworkHelper(context).isNetworkAvailable()) {
-            // ✅ OFFLINE: Gunakan cache (sampai 7 hari)
+            // ✅ OFFLINE: Gunakan cache
             val cacheControl = CacheControl.Builder()
                 .maxStale(7, TimeUnit.DAYS)
-                .onlyIfCached() // ✅ Hanya dari cache
+                .onlyIfCached()
                 .build()
 
             request = request.newBuilder()
                 .cacheControl(cacheControl)
                 .build()
         } else {
-            // ✅ ONLINE: NO CACHE - Selalu fresh dari network
+            // ✅ ONLINE: NO CACHE - Force network
             val cacheControl = CacheControl.Builder()
-                .noCache() // ✅ Jangan gunakan cache
+                .noCache()
+                .noStore() // ✅ Jangan simpan ke cache
                 .build()
 
             request = request.newBuilder()
@@ -54,21 +55,6 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
-    // ✅ NETWORK INTERCEPTOR - Simpan response ke cache (untuk offline nanti)
-    private val networkCacheInterceptor = Interceptor { chain ->
-        val response = chain.proceed(chain.request())
-
-        // Simpan response ke cache (tapi tidak digunakan saat online)
-        val cacheControl = CacheControl.Builder()
-            .maxAge(7, TimeUnit.DAYS) // Simpan 7 hari
-            .build()
-
-        response.newBuilder()
-            .header("Cache-Control", cacheControl.toString())
-            .removeHeader("Pragma")
-            .build()
-    }
-
     private val cache: Cache by lazy {
         val cacheDir = File(context.cacheDir, "http_cache")
         Cache(cacheDir, CACHE_SIZE)
@@ -77,8 +63,7 @@ object RetrofitClient {
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .cache(cache)
-            .addInterceptor(offlineCacheInterceptor) // ✅ Cek online/offline
-            .addNetworkInterceptor(networkCacheInterceptor) // ✅ Simpan response
+            .addInterceptor(cacheInterceptor) // ✅ HANYA 1 interceptor
             .addInterceptor(loggingInterceptor)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
