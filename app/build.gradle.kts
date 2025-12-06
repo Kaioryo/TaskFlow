@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.taskflow.app"
-    compileSdk = 36  // FIX: Hapus { version = release(36) }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.taskflow.app"
@@ -23,22 +23,38 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // ✅ ENABLE ProGuard/R8
+            isMinifyEnabled = true
+            isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // Optional: Signing config untuk release
+            // signingConfig = signingConfigs.getByName("release")
+        }
+
+        debug {
+            // Keep debug builds fast - no obfuscation
+            isMinifyEnabled = false
+            isDebuggable = true
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -77,7 +93,6 @@ dependencies {
     implementation("com.firebaseui:firebase-ui-auth:8.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
-
 
     // Lifecycle & ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
