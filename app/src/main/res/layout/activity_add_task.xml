@@ -292,6 +292,15 @@
 
         </RadioGroup>
 
+        <!-- Loading Indicator -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp" />
+
         <!-- Submit Button -->
         <Button
             android:id="@+id/btn_submit"

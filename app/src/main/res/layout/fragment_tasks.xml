@@ -127,6 +127,40 @@
             android:textSize="16sp" />
     </LinearLayout>
 
+    <!-- Sync Status Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:background="@color/colorPrimaryLight">
+
+        <TextView
+            android:id="@+id/tv_sync_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="✅ Synced"
+            android:textSize="14sp"
+            android:textColor="@color/colorTextSecondary" />
+
+        <Button
+            android:id="@+id/btn_sync"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄 Sync"
+            android:textSize="12sp"
+            style="?attr/materialButtonOutlinedStyle" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <!-- RecyclerView untuk list tasks -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_tasks"

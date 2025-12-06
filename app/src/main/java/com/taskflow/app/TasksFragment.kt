@@ -2,13 +2,12 @@ package com.taskflow.app
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,136 +17,158 @@ import kotlinx.coroutines.launch
 
 class TasksFragment : Fragment() {
 
-    private lateinit var rvTasks: RecyclerView
-    private lateinit var fabAddTask: FloatingActionButton
-    private lateinit var tvDate: TextView
     private lateinit var repository: TaskRepository
     private lateinit var taskAdapter: TaskAdapter
+    private lateinit var networkHelper: NetworkHelper
+
+    // Loading views
+    private var progressBar: ProgressBar? = null
+    private var tvSyncStatus: TextView? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return try {
-            Log.d("TasksFragment", "onCreateView started")
-            inflater.inflate(R.layout.fragment_tasks, container, false)
-        } catch (e: Exception) {
-            Log.e("TasksFragment", "Error inflating layout: ${e.message}")
-            Toast.makeText(requireContext(), "Error loading tasks", Toast.LENGTH_SHORT).show()
-            null
-        }
-    }
+        val view = inflater.inflate(R.layout.fragment_tasks, container, false)
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+        // Initialize
+        val database = AppDatabase.getDatabase(requireContext())
+        repository = TaskRepository(database.taskDao())
+        networkHelper = NetworkHelper(requireContext())
 
-        try {
-            Log.d("TasksFragment", "onViewCreated started")
+        // Setup RecyclerView
+        val recyclerView = view.findViewById<RecyclerView>(R.id.rv_tasks)
 
-            // Initialize views
-            rvTasks = view.findViewById(R.id.rv_tasks)
-            fabAddTask = view.findViewById(R.id.fab_add_task)
-            tvDate = view.findViewById(R.id.tv_date)
-
-            Log.d("TasksFragment", "Views initialized")
-
-            // Initialize database
-            val database = AppDatabase.getDatabase(requireContext())
-            repository = TaskRepository(database.taskDao())
-
-            Log.d("TasksFragment", "Database initialized")
-
-            // Set current date
-            tvDate.text = DateTimeHelper.getCurrentDate().replace("-", "\n")
-
-            setupRecyclerView()
-            loadTasksFromDatabase()
-
-            fabAddTask.setOnClickListener {
-                startActivity(Intent(requireContext(), AddTaskActivity::class.java))
-            }
-
-            Log.d("TasksFragment", "Setup completed")
-
-        } catch (e: Exception) {
-            Log.e("TasksFragment", "Error in onViewCreated: ${e.message}", e)
-            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun setupRecyclerView() {
-        // ✅ PASS ALL 4 REQUIRED PARAMETERS
+        // ✅ INITIALIZE ADAPTER dengan constructor yang benar
         taskAdapter = TaskAdapter(
             tasks = emptyList(),
             onTaskClick = { task ->
-                // Edit task
+                // Navigate to detail or edit
                 val intent = Intent(requireContext(), AddTaskActivity::class.java)
                 intent.putExtra("EDIT_TASK_ID", task.id)
                 startActivity(intent)
             },
             onTaskDelete = { task ->
-                // Delete task with confirmation
-                showDeleteConfirmation(task)
+                deleteTask(task)
             },
             onTaskToggle = { task ->
-                // Toggle completion status
-                lifecycleScope.launch {
-                    val updatedTask = task.copy(isCompleted = !task.isCompleted)
-                    repository.updateTask(updatedTask)
-                    Toast.makeText(
-                        requireContext(),
-                        if (updatedTask.isCompleted) "✅ Task completed!" else "⏳ Task reopened",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                markTaskAsComplete(task)
             }
         )
 
-        rvTasks.layoutManager = LinearLayoutManager(requireContext())
-        rvTasks.adapter = taskAdapter
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = taskAdapter
 
-        Log.d("TasksFragment", "RecyclerView setup completed")
+        // ✅ LOADING VIEWS (optional - jika ada di layout)
+        progressBar = view.findViewById(R.id.progressBar)
+        tvSyncStatus = view.findViewById(R.id.tv_sync_status)
+
+        // FAB untuk add task
+        view.findViewById<FloatingActionButton>(R.id.fab_add_task).setOnClickListener {
+            startActivity(Intent(requireContext(), AddTaskActivity::class.java))
+        }
+
+        // ✅ SYNC BUTTON (optional - jika ada di layout)
+        view.findViewById<View>(R.id.btn_sync)?.setOnClickListener {
+            syncTasksFromCloud()
+        }
+
+        // Load tasks
+        loadTasks()
+
+        return view
     }
 
-    private fun loadTasksFromDatabase() {
-        try {
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    Log.d("TasksFragment", "Loading tasks from database...")
-                    repository.incompleteTasks.collect { tasks ->
-                        Log.d("TasksFragment", "Tasks loaded: ${tasks.size} items")
-                        taskAdapter.updateTasks(tasks)
-                    }
-                } catch (e: Exception) {
-                    Log.e("TasksFragment", "Error loading tasks: ${e.message}", e)
+    private fun loadTasks() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repository.allTasks.collect { tasks ->
+                // ✅ GUNAKAN updateTasks() bukan submitList()
+                taskAdapter.updateTasks(tasks)
+
+                // Update sync status
+                if (networkHelper.isNetworkAvailable()) {
+                    tvSyncStatus?.text = "✅ Synced"
+                } else {
+                    tvSyncStatus?.text = "📱 Offline"
                 }
             }
-        } catch (e: Exception) {
-            Log.e("TasksFragment", "Error in loadTasksFromDatabase: ${e.message}", e)
         }
     }
 
-    private fun showDeleteConfirmation(task: Task) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Delete Task")
-            .setMessage("Are you sure you want to delete \"${task.title}\"?")
-            .setPositiveButton("Delete") { _, _ ->
-                lifecycleScope.launch {
-                    repository.deleteTask(task)
-                    Toast.makeText(requireContext(), "🗑️ Task deleted", Toast.LENGTH_SHORT).show()
+    // ✅ SYNC FROM CLOUD
+    private fun syncTasksFromCloud() {
+        if (!networkHelper.isNetworkAvailable()) {
+            Toast.makeText(requireContext(), "❌ No internet connection", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        progressBar?.visibility = View.VISIBLE
+        tvSyncStatus?.text = "🔄 Syncing..."
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val cloudTasks = FirebaseManager.getTasksFromCloud()
+
+                // Merge with local tasks
+                for (task in cloudTasks) {
+                    repository.insertTask(task)
                 }
+
+                Toast.makeText(
+                    requireContext(),
+                    "✅ Synced ${cloudTasks.size} tasks from cloud",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                tvSyncStatus?.text = "✅ Synced"
+            } catch (e: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    "❌ Sync failed: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                tvSyncStatus?.text = "❌ Sync failed"
+            } finally {
+                progressBar?.visibility = View.GONE
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
     }
 
-    override fun onResume() {
-        super.onResume()
-        try {
-            loadTasksFromDatabase()
-        } catch (e: Exception) {
-            Log.e("TasksFragment", "Error in onResume: ${e.message}", e)
+    private fun deleteTask(task: Task) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repository.deleteTask(task)
+
+            // ✅ DELETE FROM CLOUD
+            if (networkHelper.isNetworkAvailable()) {
+                FirebaseManager.deleteTaskFromCloud(task.id)
+                Toast.makeText(requireContext(), "☁️ Deleted from cloud", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "📱 Deleted locally. Will sync when online.", Toast.LENGTH_SHORT).show()
+            }
+
+            Toast.makeText(requireContext(), "🗑️ Task deleted", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun markTaskAsComplete(task: Task) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val completedTask = task.copy(isCompleted = !task.isCompleted)
+            repository.updateTask(completedTask)
+
+            // ✅ SYNC TO CLOUD
+            if (networkHelper.isNetworkAvailable()) {
+                FirebaseManager.syncTaskToCloud(completedTask)
+            }
+
+            val statusText = if (completedTask.isCompleted) "✅ Task completed!" else "🔄 Task reopened"
+            Toast.makeText(requireContext(), statusText, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        progressBar = null
+        tvSyncStatus = null
     }
 }

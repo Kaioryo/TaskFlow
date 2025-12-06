@@ -5,8 +5,7 @@ import android.app.TimePickerDialog
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.RadioButton
-import android.widget.RadioGroup
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -14,18 +13,25 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
 class AddTaskActivity : AppCompatActivity() {
 
     private lateinit var repository: TaskRepository
+    private lateinit var networkHelper: NetworkHelper
     private var selectedPriority = "medium"
     private var selectedDate = "24-01-2024"
     private var selectedTime = "23:59"
     private var selectedReminderOffset: Long = 0
     private var editTaskId: Int = -1
+
+    // Loading state
+    private lateinit var progressBar: ProgressBar
+    private lateinit var btnSubmit: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +39,7 @@ class AddTaskActivity : AppCompatActivity() {
 
         val database = AppDatabase.getDatabase(this)
         repository = TaskRepository(database.taskDao())
+        networkHelper = NetworkHelper(this)
 
         // Views
         val etTitle = findViewById<TextInputEditText>(R.id.et_title)
@@ -44,8 +51,12 @@ class AddTaskActivity : AppCompatActivity() {
         val tvSelectedDate = findViewById<TextView>(R.id.tv_selected_date)
         val tvSelectedTime = findViewById<TextView>(R.id.tv_selected_time)
         val tvTimeDisplay = findViewById<TextView>(R.id.tv_time_display)
-        val rgPriority = findViewById<RadioGroup>(R.id.rg_priority)
-        val btnSubmit = findViewById<Button>(R.id.btn_submit)
+        val rgPriority = findViewById<android.widget.RadioGroup>(R.id.rg_priority)
+        btnSubmit = findViewById(R.id.btn_submit)
+
+        // ✅ PROGRESS BAR (tambahkan ini di layout XML juga)
+        // progressBar = findViewById(R.id.progressBar)
+        // Atau buat programmatically jika belum ada di layout
 
         // ✅ SET CURRENT DATE & TIME AS DEFAULT
         selectedDate = DateTimeHelper.getCurrentDate()
@@ -132,72 +143,147 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            lifecycleScope.launch {
-                try {
-                    if (editTaskId == -1) {
-                        // ✅ CREATE NEW TASK
-                        val task = Task(
-                            title = title,
-                            description = description.ifEmpty { "No description" },
-                            location = submission,
-                            dueDate = selectedDate,
-                            dueTime = selectedTime,
-                            priority = selectedPriority
-                        )
+            saveTask(title, description, submission)
+        }
+    }
 
-                        // Insert and get the task ID
-                        val taskId = repository.insertTask(task).toInt()
+    private fun saveTask(title: String, description: String, submission: String) {
+        // ✅ SHOW LOADING STATE
+        setLoadingState(true)
 
-                        // ✅ SET REMINDER IF SELECTED
-                        if (selectedReminderOffset > 0) {
-                            setTaskReminder(taskId, title, description)
-                        }
+        lifecycleScope.launch {
+            try {
+                if (editTaskId == -1) {
+                    // ✅ CREATE NEW TASK
+                    val task = Task(
+                        title = title,
+                        description = description.ifEmpty { "No description" },
+                        location = submission,
+                        dueDate = selectedDate,
+                        dueTime = selectedTime,
+                        priority = selectedPriority
+                    )
 
+                    // Insert and get the task ID
+                    val taskId = repository.insertTask(task).toInt()
+                    val insertedTask = task.copy(id = taskId)
+
+                    // ✅ SET REMINDER IF SELECTED
+                    if (selectedReminderOffset > 0) {
+                        setTaskReminder(taskId, title, description)
+                    }
+
+                    // ✅ SYNC TO CLOUD (dengan offline support)
+                    syncTaskToCloud(insertedTask)
+
+                    withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@AddTaskActivity,
                             "✅ Task added successfully!",
                             Toast.LENGTH_SHORT
                         ).show()
+                        setLoadingState(false)
+                        finish()
+                    }
 
-                    } else {
-                        // ✅ UPDATE EXISTING TASK
-                        val existingTask = repository.getTaskById(editTaskId)
-                        if (existingTask != null) {
-                            val updatedTask = existingTask.copy(
-                                title = title,
-                                description = description,
-                                location = submission,
-                                dueDate = selectedDate,
-                                dueTime = selectedTime,
-                                priority = selectedPriority
-                            )
-                            repository.updateTask(updatedTask)
+                } else {
+                    // ✅ UPDATE EXISTING TASK
+                    val existingTask = repository.getTaskById(editTaskId)
+                    if (existingTask != null) {
+                        val updatedTask = existingTask.copy(
+                            title = title,
+                            description = description,
+                            location = submission,
+                            dueDate = selectedDate,
+                            dueTime = selectedTime,
+                            priority = selectedPriority
+                        )
+                        repository.updateTask(updatedTask)
 
-                            // ✅ UPDATE REMINDER
-                            if (selectedReminderOffset > 0) {
-                                setTaskReminder(editTaskId, title, description)
-                            } else if (existingTask.reminderSet && selectedReminderOffset == 0L) {
-                                // Cancel reminder if user removed it
-                                ReminderHelper.cancelReminder(this@AddTaskActivity, editTaskId)
-                            }
+                        // ✅ UPDATE REMINDER
+                        if (selectedReminderOffset > 0) {
+                            setTaskReminder(editTaskId, title, description)
+                        } else if (existingTask.reminderSet && selectedReminderOffset == 0L) {
+                            ReminderHelper.cancelReminder(this@AddTaskActivity, editTaskId)
+                        }
 
+                        // ✅ SYNC TO CLOUD
+                        syncTaskToCloud(updatedTask)
+
+                        withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 this@AddTaskActivity,
                                 "✅ Task updated successfully!",
                                 Toast.LENGTH_SHORT
                             ).show()
+                            setLoadingState(false)
+                            finish()
                         }
                     }
-                    finish()
-                } catch (e: Exception) {
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@AddTaskActivity,
                         "❌ Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
+                    setLoadingState(false)
                 }
             }
         }
+    }
+
+    // ✅ SYNC TO CLOUD WITH OFFLINE SUPPORT
+    private suspend fun syncTaskToCloud(task: Task) {
+        withContext(Dispatchers.IO) {
+            try {
+                if (networkHelper.isNetworkAvailable()) {
+                    // Online: sync immediately
+                    FirebaseManager.syncTaskToCloud(task)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@AddTaskActivity,
+                            "☁️ Synced to cloud",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    // Offline: add to sync queue via MainActivity's SyncManager
+                    withContext(Dispatchers.Main) {
+                        try {
+                            // Get MainActivity instance if available
+                            if (this@AddTaskActivity.parent is MainActivity) {
+                                (this@AddTaskActivity.parent as MainActivity).getSyncManager()
+                                    .addTaskToSyncQueue(task)
+                            }
+                            Toast.makeText(
+                                this@AddTaskActivity,
+                                "📱 Saved locally. Will sync when online.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            android.util.Log.e("AddTaskActivity", "Offline queue error: ${e.message}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AddTaskActivity", "Sync error: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ LOADING STATE MANAGEMENT
+    private fun setLoadingState(isLoading: Boolean) {
+        btnSubmit.isEnabled = !isLoading
+        btnSubmit.text = if (isLoading) {
+            if (editTaskId == -1) "Creating..." else "Updating..."
+        } else {
+            if (editTaskId == -1) "Create Task" else "Update Task"
+        }
+
+        // Jika ada progressBar di layout
+        // progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 
     private fun showDatePicker(onDateSelected: (String) -> Unit) {
@@ -229,11 +315,11 @@ class AddTaskActivity : AppCompatActivity() {
             .setTitle("Set Reminder")
             .setItems(options) { _, which ->
                 selectedReminderOffset = when (which) {
-                    0 -> 15 * 60 * 1000L       // 15 minutes
-                    1 -> 30 * 60 * 1000L       // 30 minutes
-                    2 -> 60 * 60 * 1000L       // 1 hour
-                    3 -> 24 * 60 * 60 * 1000L  // 1 day
-                    else -> 0L                  // No reminder
+                    0 -> 15 * 60 * 1000L
+                    1 -> 30 * 60 * 1000L
+                    2 -> 60 * 60 * 1000L
+                    3 -> 24 * 60 * 60 * 1000L
+                    else -> 0L
                 }
 
                 val reminderText = if (selectedReminderOffset > 0) {
@@ -250,13 +336,11 @@ class AddTaskActivity : AppCompatActivity() {
 
     private suspend fun setTaskReminder(taskId: Int, title: String, description: String) {
         try {
-            // Calculate reminder time
             val sdf = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
             val deadline = sdf.parse("$selectedDate $selectedTime")
             val deadlineMillis = deadline?.time ?: return
             val reminderMillis = deadlineMillis - selectedReminderOffset
 
-            // Check if reminder is in the future
             if (reminderMillis < System.currentTimeMillis()) {
                 Toast.makeText(
                     this,
@@ -266,7 +350,6 @@ class AddTaskActivity : AppCompatActivity() {
                 return
             }
 
-            // Get the task and update with reminder info
             val task = repository.getTaskByIdOnce(taskId)
             if (task != null) {
                 val taskWithReminder = task.copy(
@@ -274,8 +357,6 @@ class AddTaskActivity : AppCompatActivity() {
                     reminderSet = true
                 )
                 repository.updateTask(taskWithReminder)
-
-                // Schedule the alarm
                 ReminderHelper.setReminder(this, taskWithReminder, reminderMillis)
 
                 Toast.makeText(

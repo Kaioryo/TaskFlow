@@ -18,9 +18,11 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 class MainActivity : AppCompatActivity() {
 
     private val NOTIFICATION_PERMISSION_CODE = 100
+    private lateinit var syncManager: SyncManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         // 🔑 CEK SESSION LOGIN
         if (!FirebaseManager.isUserLoggedIn()) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -29,6 +31,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_main)
+
+        // ✅ INITIALIZE SYNC MANAGER
+        syncManager = SyncManager(this)
+        syncManager.onSyncStatusChanged = { isSyncing, message ->
+            runOnUiThread {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            }
+        }
 
         // ✅ REQUEST PERMISSIONS
         requestNotificationPermissions()
@@ -65,6 +75,9 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.e("MainActivity", "Error switching tab: ${e.message}")
         }
     }
+
+    // ✅ GET SYNC MANAGER (untuk diakses dari Activities lain)
+    fun getSyncManager(): SyncManager = syncManager
 
     // ✅ REQUEST NOTIFICATION PERMISSION (Android 13+)
     private fun requestNotificationPermissions() {
@@ -120,5 +133,10 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "⚠️ Notification permission denied. Reminders won't work.", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        syncManager.cleanup()
     }
 }

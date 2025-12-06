@@ -8,10 +8,15 @@
     <color name="primary_green">#006650</color>
     <color name="primary_dark">#004D3D</color>
     <color name="accent_teal">#03DAC5</color>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorAccent">#03DAC5</color>
+    <color name="colorPrimaryLight">#E8E3FF</color>
+    <color name="colorTextSecondary">#666666</color>
 
     <!-- Priority Colors -->
-    <color name="priority_high">#FF6B6B</color>
-    <color name="priority_medium">#FFA500</color>
+    <color name="priority_high">#F44336</color>
+    <color name="priority_medium">#FF9800</color>
     <color name="priority_low">#4CAF50</color>
 
     <!-- UI Colors -->
