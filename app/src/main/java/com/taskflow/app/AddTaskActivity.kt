@@ -3,6 +3,7 @@ package com.taskflow.app
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -100,33 +101,75 @@ class AddTaskActivity : AppCompatActivity() {
 
         // Edit Mode Check
         editTaskId = intent.getIntExtra("EDIT_TASK_ID", -1)
+        Log.d("AddTaskActivity", "Edit mode: editTaskId = $editTaskId")
 
         if (editTaskId != -1) {
             btnSubmit.text = "Update Task"
 
-            lifecycleScope.launch {
-                val task = repository.getTaskById(editTaskId)
-                if (task != null) {
-                    etTitle.setText(task.title)
-                    etDescription.setText(task.description)
-                    etSubmission.setText(task.location)
-                    selectedPriority = task.priority
-                    selectedDate = task.dueDate
-                    selectedTime = task.dueTime
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    Log.d("AddTaskActivity", "Loading task for edit, ID: $editTaskId")
 
-                    tvSelectedDate.text = selectedDate
-                    tvSelectedTime.text = selectedTime
-                    tvTimeDisplay.text = selectedTime
+                    val task = repository.getTaskById(editTaskId)
 
-                    // Load reminder info
-                    if (task.reminderSet) {
-                        tvSetReminder.text = "✅ Reminder active"
+                    if (task != null) {
+                        Log.d("AddTaskActivity", "Task loaded: ${task.title}")
+
+                        withContext(Dispatchers.Main) {
+                            etTitle.setText(task.title)
+                            etDescription.setText(task.description)
+                            etSubmission.setText(task.location)
+                            selectedPriority = task.priority
+                            selectedDate = task.dueDate
+                            selectedTime = task.dueTime
+
+                            tvSelectedDate.text = selectedDate
+                            tvSelectedTime.text = selectedTime
+                            tvTimeDisplay.text = selectedTime
+
+                            // Load reminder info
+                            if (task.reminderSet) {
+                                // Calculate remaining offset (not past time)
+                                val currentTime = System.currentTimeMillis()
+                                if (task.reminderTime > currentTime) {
+                                    selectedReminderOffset = task.reminderTime - currentTime
+                                    tvSetReminder.text = "✅ Reminder active"
+                                    Log.d("AddTaskActivity", "Reminder loaded: ${task.reminderTime}")
+                                } else {
+                                    tvSetReminder.text = "⏰ Set Reminder"
+                                    Log.d("AddTaskActivity", "Reminder expired")
+                                }
+                            }
+
+                            when(task.priority) {
+                                "high" -> rgPriority.check(R.id.rb_high)
+                                "low" -> rgPriority.check(R.id.rb_low)
+                                else -> rgPriority.check(R.id.rb_medium)
+                            }
+                        }
+
+                        Log.d("AddTaskActivity", "Task details populated successfully")
+                    } else {
+                        Log.e("AddTaskActivity", "Task not found for ID: $editTaskId")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@AddTaskActivity,
+                                "Error: Task not found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            finish()
+                        }
                     }
-
-                    when(task.priority) {
-                        "high" -> rgPriority.check(R.id.rb_high)
-                        "low" -> rgPriority.check(R.id.rb_low)
-                        else -> rgPriority.check(R.id.rb_medium)
+                } catch (e: Exception) {
+                    Log.e("AddTaskActivity", "Error loading task: ${e.message}", e)
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@AddTaskActivity,
+                            "Error loading task: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        finish()
                     }
                 }
             }
@@ -151,7 +194,7 @@ class AddTaskActivity : AppCompatActivity() {
         // ✅ SHOW LOADING STATE
         setLoadingState(true)
 
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {  // ✅ Use Dispatchers.IO for all database operations
             try {
                 if (editTaskId == -1) {
                     // ✅ CREATE NEW TASK
@@ -187,8 +230,9 @@ class AddTaskActivity : AppCompatActivity() {
                     }
 
                 } else {
-                    // ✅ UPDATE EXISTING TASK
-                    val existingTask = repository.getTaskById(editTaskId)
+                    // ✅ UPDATE EXISTING TASK - NOW WITH Dispatchers.IO!
+                    val existingTask = repository.getTaskById(editTaskId)  // This needs IO thread!
+
                     if (existingTask != null) {
                         val updatedTask = existingTask.copy(
                             title = title,
@@ -204,7 +248,9 @@ class AddTaskActivity : AppCompatActivity() {
                         if (selectedReminderOffset > 0) {
                             setTaskReminder(editTaskId, title, description)
                         } else if (existingTask.reminderSet && selectedReminderOffset == 0L) {
-                            ReminderHelper.cancelReminder(this@AddTaskActivity, editTaskId)
+                            withContext(Dispatchers.Main) {
+                                ReminderHelper.cancelReminder(this@AddTaskActivity, editTaskId)
+                            }
                         }
 
                         // ✅ SYNC TO CLOUD
@@ -219,14 +265,27 @@ class AddTaskActivity : AppCompatActivity() {
                             setLoadingState(false)
                             finish()
                         }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@AddTaskActivity,
+                                "❌ Error: Task not found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            setLoadingState(false)
+                            finish()
+                        }
                     }
                 }
             } catch (e: Exception) {
+                Log.e("AddTaskActivity", "Error saving task: ${e.message}", e)
+                e.printStackTrace()
+
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@AddTaskActivity,
                         "❌ Error: ${e.message}",
-                        Toast.LENGTH_SHORT
+                        Toast.LENGTH_LONG
                     ).show()
                     setLoadingState(false)
                 }
@@ -239,8 +298,9 @@ class AddTaskActivity : AppCompatActivity() {
         withContext(Dispatchers.IO) {
             try {
                 if (networkHelper.isNetworkAvailable()) {
-                    // Online: sync immediately
+                    // Online: sync to Firebase
                     FirebaseManager.syncTaskToCloud(task)
+
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@AddTaskActivity,
@@ -248,27 +308,25 @@ class AddTaskActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+
+                    Log.d("AddTaskActivity", "Task synced to cloud: ${task.title}")
                 } else {
-                    // Offline: add to sync queue via MainActivity's SyncManager
+                    // Offline: saved locally, will sync automatically when online
                     withContext(Dispatchers.Main) {
-                        try {
-                            // Get MainActivity instance if available
-                            if (this@AddTaskActivity.parent is MainActivity) {
-                                (this@AddTaskActivity.parent as MainActivity).getSyncManager()
-                                    .addTaskToSyncQueue(task)
-                            }
-                            Toast.makeText(
-                                this@AddTaskActivity,
-                                "📱 Saved locally. Will sync when online.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } catch (e: Exception) {
-                            android.util.Log.e("AddTaskActivity", "Offline queue error: ${e.message}")
-                        }
+                        Toast.makeText(
+                            this@AddTaskActivity,
+                            "📱 Saved locally. Will sync when online.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
+
+                    Log.d("AddTaskActivity", "Offline mode: Task saved locally")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("AddTaskActivity", "Sync error: ${e.message}")
+                Log.e("AddTaskActivity", "Sync error: ${e.message}", e)
+
+                // Don't show error to user - silent fail for better UX
+                // Task is already saved locally, sync will retry later
             }
         }
     }

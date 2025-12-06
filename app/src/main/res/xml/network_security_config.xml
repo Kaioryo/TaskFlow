@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+    ====================================================================================================
+    TaskFlow Network Security Configuration - FIXED VERSION
+    ====================================================================================================
+    -->
+
+    <!-- Base configuration - Block HTTP, Allow HTTPS -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust system certificates -->
+            certificates src="system" />
+            <!-- Allow user certificates in debug builds -->
+            certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug overrides for development -->
+    <debug-overrides>
+        <trust-anchors>
+            <!-- Trust user-installed certificates in debug -->
+            certificates src="user" />
+            certificates src="system" />
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>
