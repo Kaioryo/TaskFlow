@@ -400,11 +400,13 @@ class AddTaskActivity : AppCompatActivity() {
             val reminderMillis = deadlineMillis - selectedReminderOffset
 
             if (reminderMillis < System.currentTimeMillis()) {
-                Toast.makeText(
-                    this,
-                    "⚠️ Reminder time is in the past",
-                    Toast.LENGTH_SHORT
-                ).show()
+                withContext(Dispatchers.Main) {  // ✅ Switch to Main thread for Toast
+                    Toast.makeText(
+                        this@AddTaskActivity,
+                        "⚠️ Reminder time is in the past",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
                 return
             }
 
@@ -415,20 +417,30 @@ class AddTaskActivity : AppCompatActivity() {
                     reminderSet = true
                 )
                 repository.updateTask(taskWithReminder)
-                ReminderHelper.setReminder(this, taskWithReminder, reminderMillis)
 
+                // ✅ Call ReminderHelper on Main thread (system API)
+                withContext(Dispatchers.Main) {
+                    ReminderHelper.setReminder(this@AddTaskActivity, taskWithReminder, reminderMillis)
+
+                    Toast.makeText(
+                        this@AddTaskActivity,
+                        "🔔 Reminder scheduled!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                Log.d("AddTaskActivity", "Reminder set successfully for task $taskId")
+            }
+        } catch (e: Exception) {
+            Log.e("AddTaskActivity", "Error setting reminder: ${e.message}", e)
+
+            withContext(Dispatchers.Main) {  // ✅ Switch to Main thread for Toast
                 Toast.makeText(
-                    this,
-                    "🔔 Reminder scheduled!",
+                    this@AddTaskActivity,
+                    "❌ Error setting reminder: ${e.message}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
-        } catch (e: Exception) {
-            Toast.makeText(
-                this,
-                "❌ Error setting reminder: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
         }
     }
 }
