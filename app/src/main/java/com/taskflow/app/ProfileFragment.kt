@@ -152,15 +152,16 @@ class ProfileFragment : Fragment() {
             .setTitle("🚪 Logout")
             .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Yes, Logout") { _, _ ->
-                // Clear SharedPreferences
+                // Sign out remote (firebase) dan local (prefs)
+                FirebaseManager.signOut()
                 requireContext().getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE)
                     .edit().clear().apply()
-
-                // Navigate to Login
+                // Redirect ke Login, dan hapus seluruh history
                 val intent = Intent(requireContext(), LoginActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
-
+                // Optional: finish activity supaya tidak bisa 'back'
+                requireActivity().finish()
                 Toast.makeText(requireContext(), "👋 Logged out successfully", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)

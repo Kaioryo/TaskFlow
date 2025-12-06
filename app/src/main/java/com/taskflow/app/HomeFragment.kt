@@ -55,7 +55,7 @@ class HomeFragment : Fragment() {
         try {
             val tvUsername = view.findViewById<TextView>(R.id.tv_user_name)
             val sharedPref = requireContext().getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE)
-            val username = sharedPref.getString("username", "Adnan Hafizh") ?: "Adnan Hafizh"
+            val username = sharedPref.getString("username", "User")
             tvUsername.text = username
             Log.d("HomeFragment", "✅ Username set: $username")
         } catch (e: Exception) {
