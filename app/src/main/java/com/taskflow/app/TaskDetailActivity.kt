@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -49,6 +50,7 @@ class TaskDetailActivity : AppCompatActivity() {
             val tvTime = findViewById<TextView>(R.id.tv_detail_time)
             val btnDelete = findViewById<Button>(R.id.btn_delete)
             val btnEdit = findViewById<Button>(R.id.btn_edit)
+            val btnBack = findViewById<ImageButton>(R.id.btn_back)
 
             Log.d(TAG, "Views initialized")
 
@@ -65,6 +67,10 @@ class TaskDetailActivity : AppCompatActivity() {
             btnEdit.setOnClickListener {
                 Log.d(TAG, "Edit button clicked for taskId: $taskId")
                 editTask()
+            }
+
+            btnBack.setOnClickListener {
+                finish()
             }
 
         } catch (e: Exception) {

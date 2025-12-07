@@ -7,7 +7,7 @@ class TaskRepository(private val taskDao: TaskDao) {
     val allTasks: Flow<List<Task>> = taskDao.getAllTasks()
     val incompleteTasks: Flow<List<Task>> = taskDao.getIncompleteTasks()
 
-    // ✅ NEW: Get all tasks once (for sync)
+    // ✅ Get all tasks once (for sync)
     val allTasksOnce: List<Task>
         get() = taskDao.getAllTasksOnce()
 
@@ -27,8 +27,13 @@ class TaskRepository(private val taskDao: TaskDao) {
         return taskDao.getTaskById(id)
     }
 
-    // ✅ NEW: Get task by ID once (synchronous)
+    // ✅ Get task by ID once (synchronous)
     suspend fun getTaskByIdOnce(id: Int): Task? {
         return taskDao.getTaskByIdOnce(id)
+    }
+
+    // ✅ NEW: Delete all tasks (for logout)
+    suspend fun deleteAllTasks() {
+        taskDao.deleteAllTasks()
     }
 }

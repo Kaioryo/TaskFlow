@@ -2,17 +2,21 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="@color/background_gray">
 
-    <!-- Header dengan tanggal -->
+    <!-- ============================================ -->
+    <!-- HEADER SECTION -->
+    <!-- ============================================ -->
+
     <androidx.cardview.widget.CardView
         android:id="@+id/card_header"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="16dp"
+        app:cardBackgroundColor="@color/white"
+        app:cardCornerRadius="0dp"
         app:cardElevation="4dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,166 +25,175 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:orientation="vertical"
+            android:padding="20dp">
 
-            <!-- Tanggal besar -->
-            <TextView
-                android:id="@+id/tv_date"
-                android:layout_width="wrap_content"
+            <!-- Title & Sync Status Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="24\nJan 2024"
-                android:textColor="@color/black"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <!-- Button "Today" -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="My Tasks"
+                    android:textColor="@color/text_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
+                <!-- ✅ SYNC STATUS - ID YANG HILANG! -->
+                <TextView
+                    android:id="@+id/tv_sync_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="✅ Synced"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:background="@color/background_gray"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+
+            </LinearLayout>
+
+            <!-- ✅ PROGRESS BAR - ID YANG HILANG! -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
+            <!-- Filter Buttons (ID TETAP SAMA) -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@android:color/holo_green_light"
-                android:padding="8dp"
-                android:text="Today"
-                android:textColor="@color/white" />
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <Button
+                    android:id="@+id/btn_filter_all"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="All"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/rounded_button"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btn_filter_incomplete"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Active"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:stateListAnimator="@null" />
+
+                <Button
+                    android:id="@+id/btn_filter_completed"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Done"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:stateListAnimator="@null" />
+
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Mini Calendar (Optional - bisa skip dulu) -->
-    <TextView
-        android:id="@+id/tv_priority_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text="Priority:"
-        android:textColor="#666666"
-        android:textSize="14sp"
+    <!-- ============================================ -->
+    <!-- TASK LIST -->
+    <!-- ============================================ -->
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_tasks"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="80dp"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/card_header" />
+        app:layout_constraintTop_toBottomOf="@id/card_header"
+        tools:listitem="@layout/item_task" />
 
-    <!-- Legend Priority -->
+    <!-- ============================================ -->
+    <!-- EMPTY STATE -->
+    <!-- ============================================ -->
+
     <LinearLayout
-        android:id="@+id/layout_legend"
+        android:id="@+id/empty_state"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal"
-        app:layout_constraintStart_toEndOf="@id/tv_priority_label"
-        app:layout_constraintTop_toBottomOf="@id/card_header">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="● High"
-            android:textColor="#FF6B6B"
-            android:textSize="12sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="● Medium"
-            android:textColor="#FFA500"
-            android:textSize="12sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="● Low"
-            android:textColor="#4CAF50"
-            android:textSize="12sp" />
-    </LinearLayout>
-
-    <!-- Tab Due/Course (Optional - bisa skip) -->
-    <LinearLayout
-        android:id="@+id/layout_tabs"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_legend">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="24dp"
-            android:text="Due"
-            android:textColor="@color/black"
-            android:textSize="16sp"
+            android:text="📝"
+            android:textSize="64sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="No tasks yet"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Course"
-            android:textColor="#CCCCCC"
-            android:textSize="16sp" />
-    </LinearLayout>
-
-    <!-- ✅ Sync Status Bar (NO BUTTON - Auto sync only) -->
-    <LinearLayout
-        android:id="@+id/layout_sync_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:background="#E8F5E9"
-        app:layout_constraintTop_toBottomOf="@id/layout_tabs"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:id="@+id/tv_sync_status"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="✅ Auto sync active"
+            android:layout_marginTop="8dp"
+            android:text="Tap the + button to create your first task"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp"
-            android:textColor="#2E7D32" />
+            android:gravity="center" />
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="8dp"
-            android:visibility="gone" />
     </LinearLayout>
 
-    <!-- RecyclerView untuk list tasks -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_tasks"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:clipToPadding="false"
-        android:paddingBottom="80dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_sync_status" />
+    <!-- ============================================ -->
+    <!-- FAB (ADD TASK BUTTON) - ID TETAP SAMA -->
+    <!-- ============================================ -->
 
-    <!-- Floating Action Button untuk Add Task -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
     android:id="@+id/fab_add_task"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="16dp"
-    android:layout_marginBottom="80dp"
-    android:src="@android:drawable/ic_input_add"
-    app:backgroundTint="#006650"
+    android:layout_marginEnd="24dp"
+    android:layout_marginBottom="24dp"
+    android:src="@drawable/ic_add"
+    android:contentDescription="Add new task"
+    app:tint="@color/white"
+    app:backgroundTint="@color/primary_green"
     app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:tint="@color/white" />
+    app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

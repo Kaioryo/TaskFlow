@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -11,7 +12,9 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var googleSignInClient: GoogleSignInClient
@@ -51,6 +54,9 @@ class LoginActivity : AppCompatActivity() {
                 btnLogin.text = "Logging in..."
                 val result = FirebaseManager.signIn(email, password)
                 result.onSuccess { user ->
+                    // ✅ CHECK & CLEAR if different user
+                    checkAndClearDatabaseIfNeeded(user.uid)
+
                     val userModel = FirebaseManager.getUserData(user.uid)
                     getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE).edit()
                         .putString("email", user.email)
@@ -72,9 +78,11 @@ class LoginActivity : AppCompatActivity() {
                 }
             }
         }
+
         tvRegister.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+
         btnGoogleSignIn.setOnClickListener {
             val signInIntent = googleSignInClient.signInIntent
             startActivityForResult(signInIntent, RC_SIGN_IN)
@@ -98,7 +106,6 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    // ======= HANYA BAGIAN INI YANG BERUBAH ======
     private fun firebaseAuthWithGoogle(idToken: String) {
         val googleCredential = GoogleAuthProvider.getCredential(idToken, null)
         firebaseAuth.signInWithCredential(googleCredential)
@@ -107,12 +114,18 @@ class LoginActivity : AppCompatActivity() {
                     val user = firebaseAuth.currentUser
                     if (user != null) {
                         lifecycleScope.launch {
+                            // ✅ CHECK & CLEAR if different user
+                            checkAndClearDatabaseIfNeeded(user.uid)
+
                             val userModel = FirebaseManager.getUserData(user.uid)
                             getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE).edit()
                                 .putString("email", user.email)
                                 .putString("uid", user.uid)
                                 .putString("username", userModel?.username ?: user.displayName ?: user.email)
                                 .apply()
+
+                            Toast.makeText(this@LoginActivity, "✅ Welcome ${user.displayName}!", Toast.LENGTH_SHORT).show()
+
                             val intent = Intent(this@LoginActivity, MainActivity::class.java)
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             startActivity(intent)
@@ -133,10 +146,8 @@ class LoginActivity : AppCompatActivity() {
                             .setPositiveButton("Link") { _, _ ->
                                 val password = input.text.toString()
                                 val manualCred = EmailAuthProvider.getCredential(email!!, password)
-                                // Login manual dulu
                                 FirebaseAuth.getInstance().signInWithCredential(manualCred)
                                     .addOnSuccessListener { result ->
-                                        // LINK ke Google (harus UID yang sama!)
                                         result.user?.linkWithCredential(googleCredential)
                                             ?.addOnSuccessListener {
                                                 Toast.makeText(this, "Akun berhasil di-link!\nSekarang bisa login manual/Google!", Toast.LENGTH_LONG).show()
@@ -160,5 +171,39 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             }
+    }
+
+    // ✅ NEW: Check and clear database if different user
+    private suspend fun checkAndClearDatabaseIfNeeded(newUid: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val sharedPref = getSharedPreferences("TaskFlowPrefs", Context.MODE_PRIVATE)
+                val lastUid = sharedPref.getString("last_uid", null)
+
+                Log.d("LoginActivity", "Last UID: $lastUid")
+                Log.d("LoginActivity", "New UID: $newUid")
+
+                if (lastUid != null && lastUid != newUid) {
+                    // Different user! Clear local database
+                    Log.d("LoginActivity", "🗑️ Different user detected! Clearing local database...")
+
+                    val database = AppDatabase.getDatabase(this@LoginActivity)
+                    val repository = TaskRepository(database.taskDao())
+                    repository.deleteAllTasks()
+
+                    Log.d("LoginActivity", "✅ Local database cleared for new user")
+                } else {
+                    Log.d("LoginActivity", "✅ Same user or first login, keeping database")
+                }
+
+                // Save new UID
+                sharedPref.edit()
+                    .putString("last_uid", newUid)
+                    .apply()
+
+            } catch (e: Exception) {
+                Log.e("LoginActivity", "❌ Error checking/clearing database: ${e.message}", e)
+            }
+        }
     }
 }

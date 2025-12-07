@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -56,7 +57,6 @@ class NotificationsFragment : Fragment() {
     private fun loadNotifications() {
         viewLifecycleOwner.lifecycleScope.launch {
             repository.incompleteTasks.collect { tasks ->
-                // Generate notifications from tasks
                 val notifications = tasks.map { task ->
                     NotificationItem(
                         title = "Reminder: ${task.title}",
@@ -64,7 +64,18 @@ class NotificationsFragment : Fragment() {
                         isUnread = true
                     )
                 }
+
                 notificationAdapter.updateNotifications(notifications)
+
+                // ✅ Show/hide empty state
+                val emptyState = view?.findViewById<LinearLayout>(R.id.layout_empty_state)
+                if (notifications.isEmpty()) {
+                    emptyState?.visibility = View.VISIBLE
+                    rvNotifications.visibility = View.GONE
+                } else {
+                    emptyState?.visibility = View.GONE
+                    rvNotifications.visibility = View.VISIBLE
+                }
             }
         }
     }

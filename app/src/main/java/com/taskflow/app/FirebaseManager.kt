@@ -202,6 +202,17 @@ object FirebaseManager {
         }
     }
 
+    // ✅ CLEAR ALL LOCAL TASKS (for logout)
+    suspend fun clearLocalTasks(context: android.content.Context) {
+        try {
+            val database = AppDatabase.getDatabase(context)
+            database.taskDao().deleteAllTasks()
+            Log.d("FirebaseManager", "✅ Local tasks cleared")
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "❌ Error clearing local tasks: ${e.message}")
+        }
+    }
+
     // ✅ DELETE TASK FROM CLOUD (FIXED)
     suspend fun deleteTaskFromCloud(taskId: Int) {
         try {

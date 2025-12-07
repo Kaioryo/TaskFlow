@@ -1,30 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base Colors -->
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
 
-    <!-- TaskFlow App Colors -->
+    <!-- Base Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Primary (Teal/Green - Keep existing) -->
     <color name="primary_green">#006650</color>
     <color name="primary_dark">#004D3D</color>
     <color name="accent_teal">#03DAC5</color>
-    <color name="colorPrimary">#6200EE</color>
-    <color name="colorPrimaryDark">#3700B3</color>
-    <color name="colorAccent">#03DAC5</color>
-    <color name="colorPrimaryLight">#E8E3FF</color>
-    <color name="colorTextSecondary">#666666</color>
 
-    <!-- Priority Colors -->
+    <!-- Material Theme Colors -->
+    <color name="colorPrimary">#006650</color>
+    <color name="colorPrimaryDark">#004D3D</color>
+    <color name="colorAccent">#03DAC5</color>
+    <color name="colorPrimaryLight">#B2DFDB</color>
+    <color name="colorTextSecondary">#757575</color>
+
+    <!-- Priority Colors (Keep existing) -->
     <color name="priority_high">#F44336</color>
     <color name="priority_medium">#FF9800</color>
     <color name="priority_low">#4CAF50</color>
 
-    <!-- UI Colors -->
-    <color name="background_gray">#F5F5F5</color>
+    <!-- UI Colors (Improved) -->
+    <color name="background_gray">#FAFAFA</color>
     <color name="text_gray">#666666</color>
-    <color name="text_light_gray">#CCCCCC</color>
+    <color name="text_light_gray">#BDBDBD</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="divider">#E0E0E0</color>
 
-    <!-- Material Design 3 Colors (YANG KURANG INI) -->
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="error">#F44336</color>
+    <color name="info">#2196F3</color>
+
+    <!-- NEW: Priority Light Backgrounds -->
+    <color name="priority_high_light">#FFEBEE</color>
+    <color name="priority_medium_light">#FFF3E0</color>
+    <color name="priority_low_light">#E8F5E9</color>
+
+    <!-- NEW: Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+
+    <!-- Input Field Colors -->
+    <color name="input_background">#FAFAFA</color>
+    <color name="input_text">#212121</color>
+    <color name="input_hint">#9E9E9E</color>
+
+    <!-- Material Design 3 Colors (Keep existing) -->
     <color name="md_theme_primary">#006650</color>
     <color name="md_theme_onPrimary">#FFFFFF</color>
     <color name="md_theme_primaryContainer">#80CBC4</color>
@@ -41,4 +67,5 @@
     <color name="md_theme_onBackground">#191C1A</color>
     <color name="md_theme_surface">#FBFDF9</color>
     <color name="md_theme_onSurface">#191C1A</color>
+
 </resources>
