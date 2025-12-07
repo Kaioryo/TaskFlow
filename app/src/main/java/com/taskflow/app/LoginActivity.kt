@@ -68,13 +68,17 @@ class LoginActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
-                }.onFailure { error ->
+                }// In signIn function
+                result.onFailure { error ->
                     btnLogin.isEnabled = true
                     btnLogin.text = "Login"
-                    Toast.makeText(
+
+                    // ✅ USE ErrorHandler
+                    ErrorHandler.handleException(
                         this@LoginActivity,
-                        "❌ Login failed: ${error.message}", Toast.LENGTH_LONG
-                    ).show()
+                        error as Exception,
+                        "Login failed"
+                    )
                 }
             }
         }

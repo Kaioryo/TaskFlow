@@ -5,6 +5,9 @@ plugins {
 
     id("com.google.gms.google-services")
     id("kotlin-kapt")
+
+    // ✅ ADD: Crashlytics plugin
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -23,7 +26,6 @@ android {
 
     buildTypes {
         release {
-            // ✅ ENABLE ProGuard/R8
             isMinifyEnabled = true
             isShrinkResources = true
 
@@ -31,13 +33,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            // Optional: Signing config untuk release
-            // signingConfig = signingConfigs.getByName("release")
         }
 
         debug {
-            // Keep debug builds fast - no obfuscation
             isMinifyEnabled = false
             isDebuggable = true
         }
@@ -93,6 +91,10 @@ dependencies {
     implementation("com.firebaseui:firebase-ui-auth:8.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // ✅ ADD: Firebase Crashlytics & Analytics
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-analytics")
 
     // Lifecycle & ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")

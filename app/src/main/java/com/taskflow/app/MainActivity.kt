@@ -14,6 +14,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +23,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        // ✅ Initialize Crashlytics
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+
+        // Set user ID for crash reports (if logged in)
+        FirebaseManager.getCurrentUser()?.let { user ->
+            ErrorHandler.setUserId(user.uid)
+            ErrorHandler.logEvent("app_opened", "MainActivity")
+        }
 
         // 🔑 CEK SESSION LOGIN
         if (!FirebaseManager.isUserLoggedIn()) {

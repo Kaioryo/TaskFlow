@@ -198,19 +198,16 @@ class ProfileFragment : Fragment() {
 
                 Log.d("ProfileFragment", "Password changed successfully")
 
-            } catch (e: Exception) {
+            } // In changePasswordInFirebase catch block
+            catch (e: Exception) {
                 Log.e("ProfileFragment", "Password change failed: ${e.message}", e)
 
-                val errorMessage = when {
-                    e.message?.contains("password is invalid") == true ->
-                        "❌ Current password is incorrect"
-                    e.message?.contains("network") == true ->
-                        "❌ Network error, please try again"
-                    else ->
-                        "❌ Error: ${e.message}"
-                }
-
-                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                // ✅ USE ErrorHandler
+                ErrorHandler.handleException(
+                    requireContext(),
+                    e,
+                    "Failed to change password"
+                )
             }
         }
     }

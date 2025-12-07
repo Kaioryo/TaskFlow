@@ -60,14 +60,17 @@ class RegisterActivity : AppCompatActivity() {
                     // Redirect ke Home
                     startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
                     finish()
-                }.onFailure { error ->
+                }// In register function
+                result.onFailure { error ->
                     btnRegister.isEnabled = true
-                    btnRegister.text = "Register"
-                    Toast.makeText(
+                    btnRegister.text = "Create Account"
+
+                    // ✅ USE ErrorHandler
+                    ErrorHandler.handleException(
                         this@RegisterActivity,
-                        "❌ Registration failed: ${error.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                        error as Exception,
+                        "Registration failed"
+                    )
                 }
             }
         }

@@ -204,10 +204,19 @@ class TasksFragment : Fragment() {
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } // In autoSyncTasks catch block
+            catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     tvSyncStatus?.text = "⚠️ Sync error"
                     Log.e("TasksFragment", "❌ Sync failed: ${e.message}", e)
+
+                    // ✅ USE ErrorHandler
+                    ErrorHandler.handleException(
+                        requireContext(),
+                        e,
+                        "Failed to sync tasks",
+                        showToast = false  // Don't show toast for background sync
+                    )
                 }
             } finally {
                 withContext(Dispatchers.Main) {

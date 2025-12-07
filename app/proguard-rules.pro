@@ -326,6 +326,15 @@
 # Rename source files (hide original filenames)
 -renamesourcefileattribute SourceFile
 
+# Firebase Crashlytics
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception
+
+# Keep crash reporting classes
+-keep class com.google.firebase.crashlytics.** { *; }
+-dontwarn com.google.firebase.crashlytics.**
+
 # Remove debug info (optional - uncomment for extra security)
 # -assumenosideeffects class kotlin.jvm.internal.Intrinsics {
 #     static void checkParameterIsNotNull(...);
