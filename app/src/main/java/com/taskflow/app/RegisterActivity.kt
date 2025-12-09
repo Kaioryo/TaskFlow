@@ -30,6 +30,10 @@ class RegisterActivity : AppCompatActivity() {
             val confirmPassword = etConfirmPassword.text.toString().trim()
 
             when {
+                !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                    Toast.makeText(this, "❌ Invalid email format", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
                 username.isEmpty() || email.isEmpty() || password.isEmpty() -> {
                     Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
